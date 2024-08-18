@@ -1,0 +1,63 @@
+$PROB
+Wilkins (2008) PopPK model
+
+$PARAM TVCL=19.2, TVVd=53.2, TVKa=1.15, MTT=0.424, NN=7.13, OCC=1,
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[450];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0; 
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+double ETA_IOV_MTT = IOV1;
+if(OCC==2) ETA_IOV_MTT = IOV2;
+double ETA_IOV_CL = IOV3;
+if(OCC==2) ETA_IOV_CL = IOV4;
+
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN + 1));
+double KINPT = pow(KTR, (NN + 1)) / NFAC;
+
+double CL = TVCL * exp(ETA1+ETA_IOV_CL);
+double VC = TVVd;
+double KA = TVKa;
+double BIO = 1 * exp(ETA2);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+  }
+dxdt_DEPOT = KINPT * INPT - KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.225 : ETA on CL
+ETA2: 0.679 : ETA on BIO
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4
+0 0.679 0 0.225
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA MTT NN ETA1 ETA2

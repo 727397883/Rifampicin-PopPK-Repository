@@ -1,0 +1,38 @@
+$PROB
+Karballaei (2022) PopPK model
+
+$PARAM TVCL=0.08, TVVC=0.68, TVKA1=1.1, TVKA2=0.46, TVFr=0.68, TVTLAG2=2.92, BW=70,
+$CMT DEPOT1 DEPOT2 CENT
+
+$MAIN
+double CL = TVCL * BW * exp(ETA1);
+double VC = TVVC *BW* exp(ETA2);
+double KA1 = TVKA1 * exp(ETA3);
+double KA2 = TVKA2 * exp(ETA4);
+double Fr = TVFr * exp(ETA5);
+double TLAG2 = TVTLAG2 * exp(ETA6);
+
+$ODE
+double INPT1 = 0;
+double INPT2 = 0;
+
+if (SOLVERTIME >= TLAG2) {
+  INPT2 = -KA2 * DEPOT2;
+}
+
+dxdt_DEPOT1 = -KA1 * DEPOT1;
+dxdt_DEPOT2 = INPT2;
+dxdt_CENT = Fr * KA1 * DEPOT1 + (1 - Fr) * KA2 * DEPOT2 - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.52 : ETA on CL
+ETA2: 0.097 : ETA on VC
+ETA3: 0.85 : ETA on KA1
+ETA4: 0.46 : ETA on KA2
+ETA5: 3.57 : ETA on Fr
+ETA6: 2.99 : ETA on TLAG2
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA1 KA2 Fr TLAG2 ETA1 ETA2 ETA3 ETA4 ETA5 ETA6

@@ -1,0 +1,26 @@
+$PROB
+Savic (2015) PopPK model
+
+$PARAM TVCL=5.71, TVVC=24.9, TVKa=0.644, Q=9.46, VP=12.4, F=0.6, 
+$CMT DEPOT CENT PERI
+
+$MAIN
+double CL = TVCL * exp(ETA1);
+double VC = TVVC * exp(ETA2);
+double KA = TVKa;
+double BIO = F;
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = BIO * KA * DEPOT - (CL / VC) * CENT - (Q / VC) * CENT + (Q / VP) * PERI;
+dxdt_PERI = (Q / VC) * CENT - (Q / VP) * PERI;
+
+$OMEGA @annotated
+ETA1: 0.34 : ETA on CL
+ETA2: 0.6 : ETA on VC
+ETA3: 0.53 : ETA on KA
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA Q VP BIO

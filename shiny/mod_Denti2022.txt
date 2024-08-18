@@ -1,0 +1,68 @@
+$PROB
+Denti (2022) PopPK model
+
+$PARAM TVCL=54.5, TVVd=12.3, TVKa=1.82, MTT=0.589, NN=9.7, FFM=9, Age=2, OCC=1,
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0; 
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+double ETA_IOV_MTT = IOV1;
+if(OCC==2) ETA_IOV_MTT = IOV2;
+double ETA_IOV_BIO = IOV3;
+if(OCC==2) ETA_IOV_BIO = IOV4;
+double ETA_IOV_KA = IOV5;
+if(OCC==2) ETA_IOV_KA = IOV6;
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double BIO_modified = BIO * exp(ETA_IOV_BIO);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN+1));
+double KINPT = BIO_modified * pow(KTR,(NN+1)) / NFAC; 
+double PMAy = Age+0.75;
+
+double CL = TVCL * pow((FFM / 9), 0.75) * (pow(PMAy, 3.22) / (pow(PMAy, 3.22) + pow(1.04, 3.22))) * exp(ETA1);
+double VC = TVVd * (FFM / 9) * exp(ETA2);
+double KA = TVKa * exp(ETA3+ETA_IOV_KA);
+double BIO = (0.655 + ((1 - 0.655) / 2.72) * Age) * exp(ETA4);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+}
+dxdt_DEPOT = KINPT * INPT - KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.418 : ETA on CL
+ETA2: 1.11 : ETA on VC
+ETA3: 0.451 : ETA on KA
+ETA4: 0.588 : ETA on BIO
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4 IOV5 IOV6
+0 0.588 0 0.451 0 1.11
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA BIO MTT ETA1 ETA2 ETA3 ETA4

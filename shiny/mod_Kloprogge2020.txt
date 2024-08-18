@@ -1,0 +1,51 @@
+$PROB
+Kloprogge (2020) PopPK model
+
+$PARAM TVCL=16.9, TVVC=31.3, KA=0.277, MTT=0.326, NN=1.5, BIO=1, BW=70, SEX=0, 
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0;
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+F_DEPOT = 0;
+double KTR = (NN + 1) / MTT;
+double NFAC = exp(lgamma(NN + 1));
+double KINPT = BIO * pow(KTR, (NN + 1)) / NFAC;
+
+double CL = TVCL * pow((BW / 70), 0.75) * (1 + 0.183 * SEX) * exp(ETA1);
+double VC = TVVC * pow((BW / 70), 1) * exp(ETA2);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+  }
+dxdt_DEPOT = KINPT * INPT - KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.424 : ETA on CL
+ETA2: 1.19 : ETA on VC
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC MTT NN KA

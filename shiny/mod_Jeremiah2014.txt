@@ -1,0 +1,66 @@
+$PROB
+Jeremiah (2014) PopPK model
+
+$PARAM CL7=13.9, CLss=16.5, TVVd=55.8, TVKa=1.77, MTT=1.50, NN=27.6, BIO=1, FFM=43, th=144, OCC=1,
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0;
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+double ETA_IOV_MTT = IOV1;
+if(OCC==2) ETA_IOV_MTT = IOV2;
+double ETA_IOV_BIO = IOV3;
+if(OCC==2) ETA_IOV_BIO = IOV4;
+double ETA_IOV_KA = IOV5;
+if(OCC==2) ETA_IOV_KA = IOV6;
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double BIO_modified = BIO * exp(ETA_IOV_BIO);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN+1));
+double KINPT = BIO_modified * pow(KTR,(NN+1)) / NFAC; 
+
+double CL7_eta = CL7 * pow((FFM / 43), 0.75);
+double CLss_eta = CLss * pow((FFM / 43), 0.75);
+double Vd = TVVd * pow((FFM / 43), 1);
+double Ka = TVKa* exp(ETA_IOV_KA);
+double CL1 = CL7_eta + (CLss_eta - CL7_eta) * (1 - exp(-log(2) * TIME / th));
+double CL = CL1 * exp(ETA1);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+  }
+dxdt_DEPOT = KINPT * INPT - Ka * DEPOT;
+dxdt_CENT = Ka * DEPOT - (CL / Vd) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.24 : ETA on CL
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4 IOV5 IOV6
+0 0.34 0 0.311 0 0.676
+
+$TABLE
+double CP = CENT / Vd;
+
+$CAPTURE CP CL7_eta CLss_eta Vd Ka MTT NN BIO ETA1

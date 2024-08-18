@@ -1,0 +1,66 @@
+$PROB
+Zvada (2014) PopPK model
+
+$PARAM TVCL=8.15, TVVd=16.2, MTT=1.04, NN=8.04, BW=12.5, Age=0.6, OCC=1,
+
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0; 
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+double ETA_IOV_MTT = IOV1;
+if(OCC==2) ETA_IOV_MTT = IOV2;
+double ETA_IOV_BIO = IOV3;
+if(OCC==2) ETA_IOV_BIO = IOV4;
+double ETA_IOV_CL = IOV5;
+if(OCC==2) ETA_IOV_CL = IOV6;
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double BIO_modified = BIO * exp(ETA_IOV_BIO);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN+1));
+double KINPT = BIO_modified * pow(KTR,(NN+1)) / NFAC; 
+double PMAw = Age*52+36;
+
+double CL = TVCL * pow((BW / 12.5), 0.75) * (1 / (1 + pow((PMAw / 58.2), -2.21))) * exp(ETA1+ETA_IOV_CL);
+double VC = TVVd * (BW / 12.5) * exp(ETA2);
+double BIO = 1;
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+}
+dxdt_DEPOT = KINPT * INPT - KTR * DEPOT;
+dxdt_CENT = KTR * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.571 : ETA on CL
+ETA2: 0.6588 : ETA on VC
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4 IOV5 IOV6
+0 0.6372 0 0.6934 0 0.501
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KTR MTT NN ETA1 ETA2

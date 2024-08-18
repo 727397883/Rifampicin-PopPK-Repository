@@ -1,0 +1,63 @@
+$PROB
+Denti (2016) PopPK model
+
+$PARAM TVCL=16.2, TVVd=43.3, TVKa=1.67, BW=66, Pregnancy=0, MTT=1.31, NN=54.6, BIO=1, OCC=1,
+$CMT DEPOT CENT
+
+$GLOBAL
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0; 
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+ }
+
+double ETA_IOV_MTT = IOV1;
+if(OCC==2) ETA_IOV_MTT = IOV2;
+double ETA_IOV_BIO = IOV3;
+if(OCC==2) ETA_IOV_BIO = IOV4;
+double ETA_IOV_KA = IOV5;
+if(OCC==2) ETA_IOV_KA = IOV6;
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double BIO_modified = BIO * exp(ETA_IOV_BIO);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN+1));
+double KINPT = BIO_modified * pow(KTR,(NN+1)) / NFAC; 
+
+double CL = TVCL * pow((BW / 66), 0.75) * (1 - Pregnancy * 0.14) * exp(ETA1);
+double Vd = TVVd * pow((BW / 66), 1);
+double Ka = TVKa* exp(ETA_IOV_KA);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+}
+dxdt_DEPOT = KINPT * INPT - Ka * DEPOT;
+dxdt_CENT = Ka * DEPOT - (CL / Vd) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.304 : ETA on CL
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4 IOV5 IOV6
+0 0.344 0 0.28 0 0.782
+
+$TABLE 
+double CP = CENT / Vd;
+
+$CAPTURE CP CL Vd Ka MTT NN BIO ETA1

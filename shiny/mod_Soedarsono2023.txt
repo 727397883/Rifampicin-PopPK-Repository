@@ -1,0 +1,22 @@
+$PROB
+Soedarsono (2023) PopPK model
+
+$PARAM TVCL=7.85, TVVd=30.9, TVKa=0.37, Age=40, SLCO=0, FFM=44, 
+$CMT DEPOT CENT
+
+$MAIN
+double CL = TVCL * pow((Age/ 40), -0.55) * (1 + SLCO * 0.24) * pow((FFM / 44), 0.75) * exp(ETA1);
+double VC = TVVd * (FFM / 44);
+double KA = TVKa;
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.781 : ETA on CL
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA ETA1

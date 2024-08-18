@@ -1,0 +1,62 @@
+$PROB
+Seng (2015) PopPK model
+
+$PARAM TVCL=10.3, TVVd=30.9, TVKa=2.15, BW=70, NN=2, OCC=1,
+$CMT DEPOT CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[0];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0;
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+}
+
+double ETA_IOV_BIO = IOV1;
+if(OCC==2) ETA_IOV_BIO = IOV2;
+double ETA_IOV_CL = IOV3;
+if(OCC==2) ETA_IOV_CL = IOV4;
+
+
+F_DEPOT = 0;
+double KTR = TVKa * exp(ETA2);
+double NFAC = exp(lgamma(NN + 1));
+double KINPT = BIO * pow(KTR, (NN + 1)) / NFAC;
+
+double CL = TVCL * pow((BW / 70), 0.75) * exp(ETA1+ETA_IOV_CL);
+double VC = TVVd * (BW / 70);
+double BIO = 1 * exp(ETA3+ETA_IOV_BIO); // Assuming F is affected by ETA3
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+  }
+dxdt_DEPOT = KINPT * INPT - KTR * DEPOT;
+dxdt_CENT = KTR * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.3013 : ETA on CL
+ETA2: 0.5771 : ETA on KA
+ETA3: 0.5109 : ETA on BIO
+
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4
+0 0.5718 0 0.4123
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KTR BIO ETA1 ETA2 ETA3

@@ -1,0 +1,29 @@
+$PROB
+Horita (2018) PopPK model
+
+$PARAM TVCL=5.96, TVVd=0.7, TVKa=1.24, D0=0.342, BW=70, 
+$CMT DEPOT CENT
+
+$MAIN
+double CL = TVCL * exp(ETA1);
+double VC = TVVd * BW * exp(ETA2);
+double KA = TVKa * exp(ETA3);
+double DUR = D0 * exp(ETA4);
+
+D_CENT = DUR;
+ALAG_DEPOT = DUR;
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.385 : ETA on CL
+ETA2: 0.268 : ETA on VC
+ETA3: 1.105 : ETA on KA
+ETA4: 1.311 : ETA on DUR
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA DUR ETA1 ETA2 ETA3 ETA4

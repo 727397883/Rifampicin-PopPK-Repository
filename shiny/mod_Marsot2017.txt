@@ -1,0 +1,22 @@
+$PROB
+Marsot (2017) PopPK model
+
+$PARAM TVCL=13.7, TVVd=61.1, KA=1.15, Fusidic_acid=0, 
+$CMT DEPOT CENT
+
+$MAIN
+double CL = (TVCL - 8.6 * Fusidic_acid) * exp(ETA1);
+double VC = (TVVd - 37.3 * Fusidic_acid) * exp(ETA2);
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.531 : ETA on CL
+ETA2: 0.349 : ETA on VC
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA

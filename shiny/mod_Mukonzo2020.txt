@@ -1,0 +1,28 @@
+$PROB
+Mukonzo (2020) PopPK model
+
+$PARAM TVCL=19.8831, TVVC=0.5383, TVKA=0.4682, Q=19.6854, VP=19.3284, Tlag=0.7748, 
+$CMT DEPOT CENT PERI
+
+$MAIN
+double CL = TVCL * exp(ETA1);
+double VC = TVVC * exp(ETA2);
+double KA = TVKA * exp(ETA3);
+
+// Assign the lag time
+ALAG_DEPOT = Tlag;
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT - (Q / VC) * CENT + (Q / VP) * PERI;
+dxdt_PERI = (Q / VC) * CENT - (Q / VP) * PERI;
+
+$OMEGA @annotated
+ETA1: 0.3822 : ETA on CL
+ETA2: 2.5565 : ETA on VC
+ETA3: 0.0922 : ETA on KA
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA Q VP Tlag

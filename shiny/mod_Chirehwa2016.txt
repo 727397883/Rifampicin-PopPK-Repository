@@ -1,0 +1,69 @@
+$PROB
+Chirehwa (2016) PopPK model
+
+$PARAM CL0=93.2, CLss=176, VC=50.1, TVKA=1.96, MTT=0.71, NN=19.3, BIO=1, VH=1, QH=50, fu=0.2, Km=3.35, th=4.5, TM=168, OCC=1,
+
+$CMT DEPOT LIVER CENT
+
+$GLOBAL 
+int NDOSE = 0;
+double dosetime[450];
+double dose[450];
+
+$MAIN
+if(NEWIND < 2) NDOSE = 0; 
+
+if(self.amt > 0 && self.cmt==1) {
+ NDOSE = NDOSE + 1; 
+ dosetime[NDOSE] = self.time;
+ dose[NDOSE] = self.amt;
+ }
+
+double ETA_IOV_CL0 = IOV1;
+if(OCC==2) ETA_IOV_CL0 = IOV2;
+double ETA_IOV_BIO = IOV3;
+if(OCC==2) ETA_IOV_BIO = IOV4;
+double ETA_IOV_KA = IOV5;
+if(OCC==2) ETA_IOV_KA = IOV6;
+double ETA_IOV_MTT = IOV7;
+if(OCC==2) ETA_IOV_MTT = IOV8;
+
+F_DEPOT = 0;
+double MTT_modified = MTT * exp(ETA_IOV_MTT);
+double BIO_modified = BIO * exp(ETA_IOV_BIO);
+double KTR = (NN+1)/MTT_modified;
+double NFAC = exp(lgamma(NN+1));
+double KINPT = BIO_modified * pow(KTR,(NN+1)) / NFAC; 
+
+double CL0_eta = CL0 * exp(ETA1+ETA_IOV_CL0);
+double VC_eta = VC * exp(ETA2);
+double KA = TVKA * exp(ETA_IOV_KA);
+
+$ODE
+double INPT = 0;
+int i = 0;
+while(i <= NDOSE) {
+  double IPT = 0;
+  if(SOLVERTIME >= dosetime[i]) {
+    double delta = SOLVERTIME - dosetime[i];
+    IPT = dose[i] * pow(delta, NN) * exp(-KTR * delta);  
+  }
+  INPT = INPT + IPT;
+  ++i;
+}
+
+dxdt_DEPOT = KINPT * INPT - KA * DEPOT;
+dxdt_LIVER = KA * DEPOT - QH * (1 - ((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) / (((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) + QH)) / VH * LIVER - QH * (((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) / (((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) + QH)) / VH * LIVER + QH / VC_eta * CENT;
+dxdt_CENT  = QH * (1 - ((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) / (((((CL0_eta + (CLss - CL0_eta) * (1 - exp(-log(2) * TM / 24 / th))) * CH) / (CH + Km)) * fu) + QH)) / VH * LIVER - QH / VC_eta * CENT;
+
+$OMEGA @annotated
+ETA1: 0.22 : ETA on CL
+ETA2: 0.14 : ETA on VC
+$OMEGA @name IOV @labels IOV1 IOV2 IOV3 IOV4 IOV5 IOV6 IOV7 IOV8
+0 0.219 0 0.11 0 0.812 0 0.627
+
+$TABLE 
+double CP  = CENT / VC_eta;
+double CH  = LIVER / VH;
+
+$CAPTURE CP CL0_eta VC_eta KA MTT NN BIO VH QH fu Km th TM

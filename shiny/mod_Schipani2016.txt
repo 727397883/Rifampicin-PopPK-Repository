@@ -1,0 +1,24 @@
+$PROB
+Schipani (2016) PopPK model
+
+$PARAM TVCL=23.9, TVVd=44.6, TVKa=0.236, BW=70, Age=33, Child=0,
+$CMT DEPOT CENT
+
+$MAIN
+double CL = TVCL * pow((BW / 70), 0.75) * pow((Age / 33), 0.517) * exp(ETA1);
+double VC = TVVd * (BW / 70) * exp(ETA2);
+double KA = TVKa;
+double BIO = 1 * pow(0.517, Child);
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = BIO * KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.466 : ETA on CL
+ETA2: 0.874 : ETA on VC
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA BIO ETA1 ETA2

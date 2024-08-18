@@ -1,0 +1,23 @@
+$PROB
+Kim (2021) PopPK model
+
+$PARAM TVCL=11.4, TVVC=17.8, Q=2.78, VP=80.7, KA=0.436, BW=60, 
+$CMT DEPOT CENT PERI
+
+$MAIN
+double CL = TVCL * pow((BW / 60), 1.14) * exp(ETA1);
+double VC = TVVC * exp(ETA2);
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = KA * DEPOT - (CL / VC) * CENT - (Q / VC) * CENT + (Q / VP) * PERI;
+dxdt_PERI = (Q / VC) * CENT - (Q / VP) * PERI;
+
+$OMEGA @annotated
+ETA1: 0.642 : ETA on CL
+ETA2: 0.702 : ETA on VC
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC Q VP KA

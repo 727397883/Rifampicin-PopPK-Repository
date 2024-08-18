@@ -1,0 +1,33 @@
+$PROB
+Nishimura (2020) PopPK model
+
+$PARAM TVCL=15.2, TVVd=2.09, TVKa=0.248, D0=1.58, Tlag=1.43, BW=51.5, FOOD=0, 
+$CMT DEPOT CENT
+
+$MAIN
+double CL = TVCL * pow((BW / 51.5), 0.978) * exp(ETA1);
+double VC = TVVd * exp(ETA2);
+double KA = TVKa * (1 + FOOD * 0.21) * exp(ETA3);
+double DUR = D0 * FOOD * exp(ETA4);
+double BIO = 1 * (1 + FOOD * 0.32) * exp(ETA6);
+
+// Assign the duration and lag time
+D_CENT = DUR;
+ALAG_DEPOT = Tlag * exp(ETA5);
+
+$ODE
+dxdt_DEPOT = -KA * DEPOT;
+dxdt_CENT = BIO * KA * DEPOT - (CL / VC) * CENT;
+
+$OMEGA @annotated
+ETA1: 0.3892 : ETA on CL
+ETA2: 1.5166 : ETA on VC
+ETA3: 0.2498 : ETA on KA
+ETA4: 0.7823 : ETA on DUR
+ETA5: 0.1296 : ETA on ALAG
+ETA6: 0.00063 : ETA on BIO
+
+$TABLE
+double CP = CENT / VC;
+
+$CAPTURE CP CL VC KA DUR BIO Tlag ETA1 ETA2 ETA3 ETA4 ETA5 ETA6
